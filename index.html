@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vårdintygsfyllare</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <h1>Vårdintygsfyllare</h1>
+        <p class="subtitle">Förenkla ifyllnad av psykiatriska vårdintyg</p>
+        
+        <div class="button-group">
+            <button id="observationsBtn">1. Iakttagelser vid undersökningen</button>
+            <button id="patientInfoBtn">2. Uppgifter från patienten själv</button>
+            <button id="otherInfoBtn">3. Information från andra personer</button>
+            <button id="journalInfoBtn">4. Uppgifter från journal</button>
+            <button id="assessmentBtn">5. Bedömning av psykisk störning</button>
+            <button id="careNeedBtn">6. Bedömning av vårdbehov</button>
+        </div>
+
+        <div id="textAreaContainer" class="hidden">
+            <h2 id="currentSectionTitle"></h2>
+            <textarea id="currentTextArea" rows="10"></textarea>
+            <div class="button-row">
+                <button id="saveBtn">Spara</button>
+                <button id="closeBtn">Stäng</button>
+            </div>
+        </div>
+
+        <button id="exportBtn" class="export-btn">Exportera till PDF</button>
+        
+        <div id="statusMessage" class="hidden"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.16.0/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
