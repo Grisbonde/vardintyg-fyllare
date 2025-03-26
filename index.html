@@ -140,8 +140,12 @@
         <div id="statusMessage" class="hidden"></div>
     </div>
 
+    <!-- Include PDF-lib and FileSaver libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.16.0/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
     <script>
-        // Lagra endast de 6 huvudfälten
+        // Store the text data
         const textData = {
             observations: '',       // Iakttagelser vid undersökningen
             patientInfo: '',        // Uppgifter från patienten själv
@@ -151,7 +155,17 @@
             careNeed: ''            // Bedömning av vårdbehov
         };
 
-        // Sektionsrubriker för UI
+        // Field mappings for PDF form fields
+        const fieldMappings = {
+            observations: 'Ange de iakttagelser psykiatriska och somatiska statusfynd som är av betydelse för bedömningen av hälsotillstånd och vårdbehov',
+            patientInfo: 'Uppgifter från patienten själv',
+            otherInfo: 'Information från andra personer än patienten',
+            journalInfo: 'Uppgifter från patientens journal',
+            assessment: 'Sammanfatta vad i hälsotillståndet som ligger till grund för bedömningen att patienten har en allvarlig psykisk störning',
+            careNeed: 'Ange varför patienten har ett oundgängligt direkt nödvändigt behov av psykiatrisk vård som inte kan tillgodoses på annat sätt än genom sluten psykiatrisk tvångsvård'
+        };
+
+        // Section titles for UI
         const sectionTitles = {
             observations: '1. Iakttagelser vid undersökningen',
             patientInfo: '2. Uppgifter från patienten själv',
@@ -161,15 +175,15 @@
             careNeed: '6. Bedömning av vårdbehov'
         };
 
-        // Initiera appen
+        // Initialize the app
         document.addEventListener('DOMContentLoaded', () => {
-            // Hämta DOM-element
+            // Get DOM elements
             const textAreaContainer = document.getElementById('textAreaContainer');
             const currentTextArea = document.getElementById('currentTextArea');
             const currentSectionTitle = document.getElementById('currentSectionTitle');
             const statusMessage = document.getElementById('statusMessage');
             
-            // Lägg till händelsehanterare för sektionsknapparna
+            // Add event listeners for section buttons
             document.getElementById('observationsBtn').addEventListener('click', () => openTextArea('observations'));
             document.getElementById('patientInfoBtn').addEventListener('click', () => openTextArea('patientInfo'));
             document.getElementById('otherInfoBtn').addEventListener('click', () => openTextArea('otherInfo'));
@@ -177,14 +191,13 @@
             document.getElementById('assessmentBtn').addEventListener('click', () => openTextArea('assessment'));
             document.getElementById('careNeedBtn').addEventListener('click', () => openTextArea('careNeed'));
             
-            // Händelsehanterare för spara/stäng
+            // Add event listeners for save/close/export
             document.getElementById('saveBtn').addEventListener('click', saveText);
             document.getElementById('closeBtn').addEventListener('click', closeTextArea);
             document.getElementById('exportBtn').addEventListener('click', exportToPDF);
             
-            // Funktioner
+            // Functions
             function openTextArea(sectionId) {
-                console.log("Öppnar sektion:", sectionId); // Debug-utskrift
                 currentSectionTitle.textContent = sectionTitles[sectionId];
                 currentTextArea.value = textData[sectionId];
                 currentTextArea.dataset.currentSection = sectionId;
@@ -196,7 +209,6 @@
                 const currentSection = currentTextArea.dataset.currentSection;
                 textData[currentSection] = currentTextArea.value;
                 showStatus('Ändringarna har sparats', 'success');
-                console.log("Sparat data:", textData); // Debug-utskrift
             }
             
             function closeTextArea() {
@@ -211,10 +223,41 @@
                 setTimeout(() => statusMessage.classList.add('hidden'), 3000);
             }
             
-            function exportToPDF() {
-                showStatus('PDF-export är inte implementerad än', 'error');
-                console.log("Data som skulle exporteras:", textData);
-                // Här kommer den faktiska PDF-genereringen senare
+            async function exportToPDF() {
+                try {
+                    showStatus('Skapar PDF...', 'success');
+                    
+                    // Load the PDF template
+                    const pdfBytes = await fetch('intyg.pdf').then(res => res.arrayBuffer());
+                    const pdfDoc = await PDFLib.PDFDocument.load(pdfBytes);
+                    const form = pdfDoc.getForm();
+                    
+                    // Fill in the form fields
+                    for (const [sectionId, fieldName] of Object.entries(fieldMappings)) {
+                        try {
+                            const field = form.getTextField(fieldName);
+                            if (field) {
+                                field.setText(textData[sectionId]);
+                            }
+                        } catch (error) {
+                            console.warn(`Could not find field ${fieldName}`);
+                        }
+                    }
+                    
+                    // Save the PDF
+                    const pdfBytesModified = await pdfDoc.save();
+                    const blob = new Blob([pdfBytesModified], { type: 'application/pdf' });
+                    
+                    // Generate filename with current date
+                    const today = new Date();
+                    const dateString = today.toISOString().split('T')[0];
+                    saveAs(blob, `Vårdintyg_${dateString}.pdf`);
+                    
+                    showStatus('PDF skapad!', 'success');
+                } catch (error) {
+                    console.error('Export error:', error);
+                    showStatus('Ett fel uppstod vid export: ' + error.message, 'error');
+                }
             }
         });
     </script>
