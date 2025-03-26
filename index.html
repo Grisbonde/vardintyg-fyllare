@@ -33,6 +33,13 @@
             margin-bottom: 30px;
         }
 
+        .patient-info-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
         .button-group {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -55,15 +62,7 @@
             background-color: #2980b9;
         }
 
-        #textAreaContainer {
-            margin: 20px 0;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background-color: #f9f9f9;
-        }
-
-        #currentTextArea {
+        input, textarea {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
@@ -71,6 +70,14 @@
             font-family: inherit;
             font-size: 16px;
             margin-bottom: 10px;
+        }
+
+        #textAreaContainer {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
         }
 
         .button-row {
@@ -117,6 +124,17 @@
         <h1>Vårdintygsfyllare</h1>
         <p class="subtitle">Förenkla ifyllnad av psykiatriska vårdintyg</p>
         
+        <div class="patient-info-section">
+            <div>
+                <label for="patientName">Efternamn och förnamn</label>
+                <input type="text" id="patientName">
+            </div>
+            <div>
+                <label for="patientId">Personnummer</label>
+                <input type="text" id="patientId">
+            </div>
+        </div>
+
         <div class="button-group">
             <button id="observationsBtn">1. Iakttagelser vid undersökningen</button>
             <button id="patientInfoBtn">2. Uppgifter från patienten själv</button>
@@ -130,7 +148,6 @@
             <h2 id="currentSectionTitle"></h2>
             <textarea id="currentTextArea" rows="10"></textarea>
             <div class="button-row">
-                <button id="saveBtn">Spara</button>
                 <button id="closeBtn">Stäng</button>
             </div>
         </div>
@@ -145,24 +162,30 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <script>
-        // Store the text data
-        const textData = {
-            observations: '',       // Iakttagelser vid undersökningen
-            patientInfo: '',        // Uppgifter från patienten själv
-            otherInfo: '',          // Information från andra personer
-            journalInfo: '',        // Uppgifter från patientens journal
-            assessment: '',         // Bedömning av psykisk störning
-            careNeed: ''            // Bedömning av vårdbehov
+        // Store all data
+        const formData = {
+            patientName: '',
+            patientId: '',
+            observations: '',
+            patientInfo: '',
+            otherInfo: '',
+            journalInfo: '',
+            assessment: '',
+            careNeed: ''
         };
 
         // Field mappings for PDF form fields
         const fieldMappings = {
+            patientName: 'Efternamn och förnamn',
+            patientId: 'Personnummersamordningsnummer',
             observations: 'Ange de iakttagelser psykiatriska och somatiska statusfynd som är av betydelse för bedömningen av hälsotillstånd och vårdbehov',
             patientInfo: 'Uppgifter från patienten själv',
             otherInfo: 'Information från andra personer än patienten',
             journalInfo: 'Uppgifter från patientens journal',
             assessment: 'Sammanfatta vad i hälsotillståndet som ligger till grund för bedömningen att patienten har en allvarlig psykisk störning',
-            careNeed: 'Ange varför patienten har ett oundgängligt direkt nödvändigt behov av psykiatrisk vård som inte kan tillgodoses på annat sätt än genom sluten psykiatrisk tvångsvård'
+            careNeed: 'Ange varför patienten har ett oundgängligt direkt nödvändigt behov av psykiatrisk vård som inte kan tillgodoses på annat sätt än genom sluten psykiatrisk tvångsvård',
+            date: 'Datum',
+            date2: 'Datum_2'
         };
 
         // Section titles for UI
@@ -182,6 +205,22 @@
             const currentTextArea = document.getElementById('currentTextArea');
             const currentSectionTitle = document.getElementById('currentSectionTitle');
             const statusMessage = document.getElementById('statusMessage');
+            const patientNameInput = document.getElementById('patientName');
+            const patientIdInput = document.getElementById('patientId');
+            
+            // Set today's date
+            const today = new Date().toISOString().split('T')[0];
+            formData.date = today;
+            formData.date2 = today;
+            
+            // Add event listeners for patient info
+            patientNameInput.addEventListener('input', (e) => {
+                formData.patientName = e.target.value;
+            });
+            
+            patientIdInput.addEventListener('input', (e) => {
+                formData.patientId = e.target.value;
+            });
             
             // Add event listeners for section buttons
             document.getElementById('observationsBtn').addEventListener('click', () => openTextArea('observations'));
@@ -191,29 +230,33 @@
             document.getElementById('assessmentBtn').addEventListener('click', () => openTextArea('assessment'));
             document.getElementById('careNeedBtn').addEventListener('click', () => openTextArea('careNeed'));
             
-            // Add event listeners for save/close/export
-            document.getElementById('saveBtn').addEventListener('click', saveText);
+            // Add event listeners for close/export
             document.getElementById('closeBtn').addEventListener('click', closeTextArea);
             document.getElementById('exportBtn').addEventListener('click', exportToPDF);
             
+            // Auto-save when textarea loses focus
+            currentTextArea.addEventListener('blur', saveCurrentText);
+            
             // Functions
             function openTextArea(sectionId) {
+                saveCurrentText(); // Auto-save any changes before switching
                 currentSectionTitle.textContent = sectionTitles[sectionId];
-                currentTextArea.value = textData[sectionId];
+                currentTextArea.value = formData[sectionId];
                 currentTextArea.dataset.currentSection = sectionId;
                 textAreaContainer.classList.remove('hidden');
                 currentTextArea.focus();
             }
             
-            function saveText() {
+            function saveCurrentText() {
                 const currentSection = currentTextArea.dataset.currentSection;
-                textData[currentSection] = currentTextArea.value;
-                showStatus('Ändringarna har sparats', 'success');
+                if (currentSection) {
+                    formData[currentSection] = currentTextArea.value;
+                }
             }
             
             function closeTextArea() {
+                saveCurrentText();
                 textAreaContainer.classList.add('hidden');
-                statusMessage.classList.add('hidden');
             }
             
             function showStatus(message, type) {
@@ -232,15 +275,15 @@
                     const pdfDoc = await PDFLib.PDFDocument.load(pdfBytes);
                     const form = pdfDoc.getForm();
                     
-                    // Fill in the form fields
-                    for (const [sectionId, fieldName] of Object.entries(fieldMappings)) {
+                    // Fill in all fields
+                    for (const [fieldId, fieldName] of Object.entries(fieldMappings)) {
                         try {
                             const field = form.getTextField(fieldName);
                             if (field) {
-                                field.setText(textData[sectionId]);
+                                field.setText(formData[fieldId] || '');
                             }
                         } catch (error) {
-                            console.warn(`Could not find field ${fieldName}`);
+                            console.warn(`Kunde inte hitta fält ${fieldName}`);
                         }
                     }
                     
@@ -248,14 +291,13 @@
                     const pdfBytesModified = await pdfDoc.save();
                     const blob = new Blob([pdfBytesModified], { type: 'application/pdf' });
                     
-                    // Generate filename with current date
-                    const today = new Date();
-                    const dateString = today.toISOString().split('T')[0];
-                    saveAs(blob, `Vårdintyg_${dateString}.pdf`);
+                    // Generate filename with patient name and date
+                    const filename = `Vårdintyg_${formData.patientName || 'Patient'}_${today}.pdf`;
+                    saveAs(blob, filename);
                     
                     showStatus('PDF skapad!', 'success');
                 } catch (error) {
-                    console.error('Export error:', error);
+                    console.error('Exportfel:', error);
                     showStatus('Ett fel uppstod vid export: ' + error.message, 'error');
                 }
             }
