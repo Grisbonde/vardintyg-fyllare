@@ -4,7 +4,113 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vårdintygsfyllare</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .app-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        #textAreaContainer {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+
+        #currentTextArea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .export-btn {
+            background-color: #27ae60;
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            margin-top: 20px;
+        }
+
+        .export-btn:hover {
+            background-color: #219653;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #statusMessage {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -34,8 +140,83 @@
         <div id="statusMessage" class="hidden"></div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.16.0/pdf-lib.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <script src="script.js"></script>
+    <script>
+        // Lagra endast de 6 huvudfälten
+        const textData = {
+            observations: '',       // Iakttagelser vid undersökningen
+            patientInfo: '',        // Uppgifter från patienten själv
+            otherInfo: '',          // Information från andra personer
+            journalInfo: '',        // Uppgifter från patientens journal
+            assessment: '',         // Bedömning av psykisk störning
+            careNeed: ''            // Bedömning av vårdbehov
+        };
+
+        // Sektionsrubriker för UI
+        const sectionTitles = {
+            observations: '1. Iakttagelser vid undersökningen',
+            patientInfo: '2. Uppgifter från patienten själv',
+            otherInfo: '3. Information från andra personer',
+            journalInfo: '4. Uppgifter från journal',
+            assessment: '5. Bedömning av psykisk störning',
+            careNeed: '6. Bedömning av vårdbehov'
+        };
+
+        // Initiera appen
+        document.addEventListener('DOMContentLoaded', () => {
+            // Hämta DOM-element
+            const textAreaContainer = document.getElementById('textAreaContainer');
+            const currentTextArea = document.getElementById('currentTextArea');
+            const currentSectionTitle = document.getElementById('currentSectionTitle');
+            const statusMessage = document.getElementById('statusMessage');
+            
+            // Lägg till händelsehanterare för sektionsknapparna
+            document.getElementById('observationsBtn').addEventListener('click', () => openTextArea('observations'));
+            document.getElementById('patientInfoBtn').addEventListener('click', () => openTextArea('patientInfo'));
+            document.getElementById('otherInfoBtn').addEventListener('click', () => openTextArea('otherInfo'));
+            document.getElementById('journalInfoBtn').addEventListener('click', () => openTextArea('journalInfo'));
+            document.getElementById('assessmentBtn').addEventListener('click', () => openTextArea('assessment'));
+            document.getElementById('careNeedBtn').addEventListener('click', () => openTextArea('careNeed'));
+            
+            // Händelsehanterare för spara/stäng
+            document.getElementById('saveBtn').addEventListener('click', saveText);
+            document.getElementById('closeBtn').addEventListener('click', closeTextArea);
+            document.getElementById('exportBtn').addEventListener('click', exportToPDF);
+            
+            // Funktioner
+            function openTextArea(sectionId) {
+                console.log("Öppnar sektion:", sectionId); // Debug-utskrift
+                currentSectionTitle.textContent = sectionTitles[sectionId];
+                currentTextArea.value = textData[sectionId];
+                currentTextArea.dataset.currentSection = sectionId;
+                textAreaContainer.classList.remove('hidden');
+                currentTextArea.focus();
+            }
+            
+            function saveText() {
+                const currentSection = currentTextArea.dataset.currentSection;
+                textData[currentSection] = currentTextArea.value;
+                showStatus('Ändringarna har sparats', 'success');
+                console.log("Sparat data:", textData); // Debug-utskrift
+            }
+            
+            function closeTextArea() {
+                textAreaContainer.classList.add('hidden');
+                statusMessage.classList.add('hidden');
+            }
+            
+            function showStatus(message, type) {
+                statusMessage.textContent = message;
+                statusMessage.className = type;
+                statusMessage.classList.remove('hidden');
+                setTimeout(() => statusMessage.classList.add('hidden'), 3000);
+            }
+            
+            function exportToPDF() {
+                showStatus('PDF-export är inte implementerad än', 'error');
+                console.log("Data som skulle exporteras:", textData);
+                // Här kommer den faktiska PDF-genereringen senare
+            }
+        });
+    </script>
 </body>
 </html>
